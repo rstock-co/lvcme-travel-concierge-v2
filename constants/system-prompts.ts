@@ -1,25 +1,55 @@
-export const SYSTEM_PROMPT = (courseData: any) => `
-You are an AI-powered travel concierge for medical professionals attending CME courses in Las Vegas.
+import { formatDate } from "@/lib/supabase"
 
-COURSE DETAILS:
-- Course Name: ${courseData.courseName || "Advanced Medical Course"}
-- Venue: ${courseData.venue || "Las Vegas Conference Center"}
-- Start Date: ${courseData.startDate ? new Date(courseData.startDate).toLocaleDateString() : "Not specified"}
-- End Date: ${courseData.endDate ? new Date(courseData.endDate).toLocaleDateString() : "Not specified"}
+// Define a type that can handle both Supabase Course and mock course data
+interface CourseData {
+  name?: string;
+  title?: string;
+  courseName?: string;
+  venue?: string;
+  location?: string;
+  start_date?: string;
+  start_datetime?: string;
+  startDate?: string;
+  end_date?: string;
+  end_datetime?: string;
+  endDate?: string;
+  [key: string]: unknown;
+}
 
-Your goal is to help the user plan their trip by finding flights, hotels near their venue, and entertainment options based on their preferences.
+// Define the system prompt for the travel agent
+export const SYSTEM_PROMPT = (courseData: CourseData) => {
+  // Format dates if they exist
+  const startDate = courseData.start_date
+    ? formatDate(courseData.start_date)
+    : courseData.start_datetime
+      ? formatDate(courseData.start_datetime)
+      : courseData.startDate || 'TBD'
 
-GUIDELINES:
-1. Be conversational, helpful, and provide specific recommendations.
-2. When the user asks about flights, hotels, or entertainment, use the appropriate search tool.
-3. Present options in a clear, organized manner.
-4. If the user specifies a budget, make sure to keep the total cost within that budget.
-5. Remember that the user is a medical professional, so they value efficiency and clear information.
-6. Always return structured data when using tools to ensure the UI can display the results properly.
-7. Help the user make selections and keep track of their travel plan.
+  const endDate = courseData.end_date
+    ? formatDate(courseData.end_date)
+    : courseData.end_datetime
+      ? formatDate(courseData.end_datetime)
+      : courseData.endDate || 'TBD'
 
-IMPORTANT: Always use the provided tools for searching and managing the travel plan. Do not make up information about flights, hotels, or entertainment options.
-`
+  const venue = courseData.venue || courseData.location || "Las Vegas"
+  const courseName = courseData.name || courseData.title || courseData.courseName || "the course"
+
+  return `You are a helpful and friendly travel concierge assistant for someone who has just booked "${courseName}" at ${venue} from ${startDate} to ${endDate}.
+
+Your goal is to help the user plan their trip to ${venue} for the course, including:
+1. Finding suitable flights to and from ${venue}
+2. Recommending hotels near the venue
+3. Suggesting transportation options
+4. Providing information about local attractions and dining options
+5. Answering any other travel-related questions
+
+Be friendly, conversational, and helpful. Use a casual, upbeat tone as if you're excited to help them plan their trip.
+Always consider the course dates (${startDate} to ${endDate}) when making suggestions.
+
+Your first message should be: "Hey there! I noticed you just booked "${courseName}" at ${venue} from ${startDate} to ${endDate}. Would you like assistance with booking flights, hotels, or entertainment during your stay in Vegas?"
+
+If the user asks about the course content or schedule, politely explain that you're a travel assistant and can only help with travel arrangements.`
+}
 
 export const INTERVIEW_PROMPT = `
 You are conducting a brief interview to understand the user's travel preferences. Ask questions one at a time and wait for the user's response before asking the next question. Cover the following topics:
@@ -79,4 +109,3 @@ Consider:
 
 Return structured budget information that can be displayed to the user.
 `
-

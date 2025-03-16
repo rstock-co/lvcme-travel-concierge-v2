@@ -3,6 +3,7 @@ import { streamText } from "ai"
 import { openai } from '@ai-sdk/openai'
 import { MOCK_COURSE_DATA } from "@/hooks/use-course-data"
 import { SYSTEM_PROMPT } from "@/constants/system-prompts"
+import { fetchCourse, formatDate } from "@/lib/supabase"
 
 // Allow streaming responses up to 30 seconds
 export const maxDuration = 30
@@ -21,8 +22,17 @@ export async function POST(req: NextRequest) {
     }
     console.log("OpenAI API Key available:", !!apiKey)
 
-    // Use mock data for now
-    const courseDetails = MOCK_COURSE_DATA
+    // Fetch course data from Supabase
+    const course = await fetchCourse()
+
+    // Use course data if available, otherwise fall back to mock data
+    const courseDetails = course || MOCK_COURSE_DATA
+
+    if (course) {
+      console.log("Using course data from Supabase:", JSON.stringify(course, null, 2))
+    } else {
+      console.log("Using mock course data:", JSON.stringify(MOCK_COURSE_DATA, null, 2))
+    }
 
     // Create the system prompt with course data
     const systemPrompt = SYSTEM_PROMPT(courseDetails)
@@ -30,9 +40,19 @@ export async function POST(req: NextRequest) {
 
     // Ensure messages are in the correct format
     if (!Array.isArray(messages) || messages.length === 0) {
-      // If no valid messages, use a test message
-      messages = [{ role: "user", content: "Tell me about flights to Las Vegas" }]
-      console.log("Using test message:", JSON.stringify(messages, null, 2))
+      // If no valid messages, create a welcome message with course details
+      const startDate = course?.start_date ? formatDate(course.start_date) : "the scheduled dates"
+      const endDate = course?.end_date ? formatDate(course.end_date) : ""
+      const venue = course?.venue || "the venue"
+      const courseName = course?.name || "your course"
+
+      const dateRange = endDate ? `from ${startDate} to ${endDate}` : `starting on ${startDate}`
+
+      messages = [{
+        role: "user",
+        content: `I just booked "${courseName}" at ${venue} ${dateRange}. Can you help me with travel arrangements?`
+      }]
+      console.log("Using welcome message with course details:", JSON.stringify(messages, null, 2))
     }
 
     console.log("Creating streamText with model and messages")
