@@ -38,7 +38,6 @@ const MessageParser: FC<MessageParserProps> = ({ content, isFlightCard }) => {
             <FlightCard
               flight={flightData}
               onSelect={handleSelectFlight}
-              theme="light"
             />
           </div>
         )

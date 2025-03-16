@@ -1,11 +1,19 @@
 "use client"
 
 import type React from "react"
-import { Clock, Users, ArrowRight, Plane, Luggage, Info } from "lucide-react"
+import {
+  Clock,
+  Users,
+  ArrowRight,
+  Plane,
+  Luggage,
+  Info
+} from "lucide-react"
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { useTheme } from "next-themes"
 
 export interface FlightStop {
   airport: string
@@ -49,10 +57,12 @@ export interface FlightData {
 export interface FlightCardProps {
   flight: FlightData
   onSelect?: (flight: FlightData) => void
-  theme?: "light" | "dark"
 }
 
-export const FlightCard: React.FC<FlightCardProps> = ({ flight, onSelect = () => {}, theme = "light" }) => {
+export const FlightCard: React.FC<FlightCardProps> = ({ flight, onSelect = () => {} }) => {
+  const { theme } = useTheme()
+  const isDark = theme === "dark"
+
   const formattedPrice = new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: flight.price.currency,
@@ -64,7 +74,9 @@ export const FlightCard: React.FC<FlightCardProps> = ({ flight, onSelect = () =>
 
   return (
     <Card
-      className={`w-full max-w-[461px] overflow-hidden border-l-4 hover:shadow-lg transition-all duration-200 hover:border-l-primary ${theme === "dark" ? "dark bg-slate-900 text-slate-100" : ""}`}
+      className={`w-full max-w-[461px] overflow-hidden border-l-4 hover:shadow-lg transition-all duration-200 hover:border-l-primary ${
+        isDark ? "dark bg-slate-900 text-slate-100" : "bg-white text-slate-900"
+      }`}
     >
       <CardHeader className="p-3 flex flex-row justify-between items-center">
         <div className="flex items-center space-x-3">
@@ -77,7 +89,7 @@ export const FlightCard: React.FC<FlightCardProps> = ({ flight, onSelect = () =>
           </div>
           <div>
             <h3 className="font-bold text-lg">{flight.airline.name}</h3>
-            <p className="text-sm text-muted-foreground">Flight #{flight.id}</p>
+            <p className={`text-sm ${isDark ? "text-slate-300" : "text-muted-foreground"}`}>Flight #{flight.id}</p>
           </div>
         </div>
         <div className="text-right">
@@ -98,13 +110,13 @@ export const FlightCard: React.FC<FlightCardProps> = ({ flight, onSelect = () =>
             </div>
 
             <div className="flex-1 px-2 flex flex-col items-center">
-              <div className="text-xs text-muted-foreground mb-1">{flight.duration}</div>
+              <div className={`text-xs ${isDark ? "text-slate-400" : "text-muted-foreground"} mb-1`}>{flight.duration}</div>
               <div className="w-full flex items-center">
                 <div className="h-[1px] flex-1 bg-muted"></div>
-                <ArrowRight className="h-5 w-5 mx-1 text-muted-foreground stroke-[2px]" />
+                <ArrowRight className={`h-5 w-5 mx-1 ${isDark ? "text-slate-400" : "text-muted-foreground"} stroke-[2px]`} />
                 <div className="h-[1px] flex-1 bg-muted"></div>
               </div>
-              <div className="text-xs text-muted-foreground mt-1">{stopLabel}</div>
+              <div className={`text-xs ${isDark ? "text-slate-400" : "text-muted-foreground"} mt-1`}>{stopLabel}</div>
             </div>
 
             <div className="text-center">
@@ -118,21 +130,21 @@ export const FlightCard: React.FC<FlightCardProps> = ({ flight, onSelect = () =>
               <div className="font-medium">
                 {flight.departure.city}, {flight.departure.state}
               </div>
-              <div className="text-muted-foreground">{flight.departure.date}</div>
+              <div className={`${isDark ? "text-slate-400" : "text-muted-foreground"}`}>{flight.departure.date}</div>
             </div>
             <div className="text-right">
               <div className="font-medium">
                 {flight.arrival.city}, {flight.arrival.state}
               </div>
-              <div className="text-muted-foreground">{flight.arrival.date}</div>
+              <div className={`${isDark ? "text-slate-400" : "text-muted-foreground"}`}>{flight.arrival.date}</div>
             </div>
           </div>
         </div>
 
         {/* Flight Details */}
         <div className="grid grid-cols-2 gap-2">
-          <div className={`rounded-md p-2 ${theme === "dark" ? "bg-slate-800" : "bg-gray-100"}`}>
-            <div className="flex items-center text-xs font-medium text-muted-foreground mb-1">
+          <div className={`rounded-md p-2 ${isDark ? "bg-slate-800" : "bg-gray-100"}`}>
+            <div className={`flex items-center text-xs font-medium ${isDark ? "text-slate-400" : "text-muted-foreground"} mb-1`}>
               <Plane className="h-3 w-3 mr-1" /> STOPS
             </div>
             <div className="font-medium flex items-center text-sm">
@@ -163,22 +175,22 @@ export const FlightCard: React.FC<FlightCardProps> = ({ flight, onSelect = () =>
             </div>
           </div>
 
-          <div className={`rounded-md p-2 ${theme === "dark" ? "bg-slate-800" : "bg-gray-100"}`}>
-            <div className="flex items-center text-xs font-medium text-muted-foreground mb-1">
+          <div className={`rounded-md p-2 ${isDark ? "bg-slate-800" : "bg-gray-100"}`}>
+            <div className={`flex items-center text-xs font-medium ${isDark ? "text-slate-400" : "text-muted-foreground"} mb-1`}>
               <Luggage className="h-3 w-3 mr-1" /> CABIN
             </div>
             <div className="font-medium text-sm">{flight.cabin}</div>
           </div>
 
-          <div className={`rounded-md p-2 ${theme === "dark" ? "bg-slate-800" : "bg-gray-100"}`}>
-            <div className="flex items-center text-xs font-medium text-muted-foreground mb-1">
+          <div className={`rounded-md p-2 ${isDark ? "bg-slate-800" : "bg-gray-100"}`}>
+            <div className={`flex items-center text-xs font-medium ${isDark ? "text-slate-400" : "text-muted-foreground"} mb-1`}>
               <Users className="h-3 w-3 mr-1" /> PASSENGERS
             </div>
             <div className="font-medium text-sm">{flight.passengers}</div>
           </div>
 
-          <div className={`rounded-md p-2 ${theme === "dark" ? "bg-slate-800" : "bg-gray-100"}`}>
-            <div className="flex items-center text-xs font-medium text-muted-foreground mb-1">
+          <div className={`rounded-md p-2 ${isDark ? "bg-slate-800" : "bg-gray-100"}`}>
+            <div className={`flex items-center text-xs font-medium ${isDark ? "text-slate-400" : "text-muted-foreground"} mb-1`}>
               <Clock className="h-3 w-3 mr-1" /> AIRPORTS
             </div>
             <div className="font-medium text-sm flex items-center space-x-1">
@@ -198,4 +210,3 @@ export const FlightCard: React.FC<FlightCardProps> = ({ flight, onSelect = () =>
     </Card>
   )
 }
-
