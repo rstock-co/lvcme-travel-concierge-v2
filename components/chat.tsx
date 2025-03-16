@@ -350,6 +350,7 @@ export function Chat() {
               isLoading={isChatLoading}
               onQuickOptionSelect={handleQuickOption}
               onFlightOptionSelect={handleFlightOption}
+              setMessages={setMessages}
             />
           )}
         </div>

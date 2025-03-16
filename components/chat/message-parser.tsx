@@ -1,6 +1,6 @@
 "use client"
 
-import { FC, useEffect, useState } from 'react'
+import { FC, useEffect, useState, useRef } from 'react'
 import { FlightCard, FlightData } from '../flight-card'
 import { FlightPreferences } from '../flight-preferences'
 import { toast } from "@/hooks/use-toast"
@@ -16,13 +16,22 @@ interface MessageParserProps {
 const MessageParser: FC<MessageParserProps> = ({ content, isFlightCard, setMessages }) => {
   const [isSearching, setIsSearching] = useState(false);
   const [flightsFound, setFlightsFound] = useState<number | null>(null);
-  const [hasDisplayedResults, setHasDisplayedResults] = useState(false);
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Use effect to signal whether this is a flight card or preferences after rendering
   useEffect(() => {
     const isCardContent = content.includes('<flight-card data=') || content.includes('<flight-preferences data=');
     isFlightCard(isCardContent);
   }, [content, isFlightCard]);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Check if we need to render flight preferences
   if (content.includes('<flight-preferences data=')) {
@@ -37,12 +46,16 @@ const MessageParser: FC<MessageParserProps> = ({ content, isFlightCard, setMessa
           if (isSearching) return; // Prevent multiple clicks
 
           setIsSearching(true);
-          setHasDisplayedResults(false);
+
+          // Clear any existing timeout
+          if (searchTimeoutRef.current) {
+            clearTimeout(searchTimeoutRef.current);
+          }
 
           // If setMessages is provided, we can add the flight results after a delay
           if (setMessages) {
             // Wait for the loading to complete (7 seconds)
-            setTimeout(() => {
+            searchTimeoutRef.current = setTimeout(() => {
               // Set a random number of flights found between 20-40
               const numFlights = Math.floor(Math.random() * 21) + 20;
               setFlightsFound(numFlights);
@@ -90,12 +103,8 @@ const MessageParser: FC<MessageParserProps> = ({ content, isFlightCard, setMessa
                 endDate: preferencesData.preferences.courseInfo.endDate
               } : null;
 
-              // Only display flight results if we haven't already
-              if (!hasDisplayedResults) {
-                setHasDisplayedResults(true);
-                // Display flight results - ensure this is called
-                displayFlightResults(flightPrefs, setMessages, courseDetails, airportInfo);
-              }
+              // Display flight results immediately after loading completes
+              displayFlightResults(flightPrefs, setMessages, courseDetails, airportInfo);
             }, 7000);
           } else {
             // Fallback to toast if setMessages is not provided
@@ -105,7 +114,7 @@ const MessageParser: FC<MessageParserProps> = ({ content, isFlightCard, setMessa
             })
 
             // Reset searching state after a delay
-            setTimeout(() => {
+            searchTimeoutRef.current = setTimeout(() => {
               setIsSearching(false);
               setFlightsFound(Math.floor(Math.random() * 21) + 20);
             }, 7000);

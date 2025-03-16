@@ -6,6 +6,15 @@ import { FlightStep } from "./flight-conversation"
 import { MessageParser } from "./message-parser"
 import { useState } from "react"
 
+interface MessageListProps {
+  messages: Message[]
+  flightStep: FlightStep | null
+  isLoading?: boolean
+  onQuickOptionSelect?: (option: string) => void
+  onFlightOptionSelect?: (step: FlightStep, choice: string) => void
+  setMessages?: React.Dispatch<React.SetStateAction<Message[]>>
+}
+
 // Single message component to handle the useState hook properly
 function ChatMessage({
   message,
@@ -110,21 +119,12 @@ function ChatMessage({
   );
 }
 
-type MessageListProps = {
-  messages: Message[]
-  flightStep: FlightStep | null
-  isLoading: boolean
-  onQuickOptionSelect: (option: string) => void
-  onFlightOptionSelect: (step: FlightStep, choice: string) => void
-  setMessages?: React.Dispatch<React.SetStateAction<Message[]>>
-}
-
 export function MessageList({
   messages,
   flightStep,
-  isLoading,
-  onQuickOptionSelect,
-  onFlightOptionSelect,
+  isLoading = false,
+  onQuickOptionSelect = () => {},
+  onFlightOptionSelect = () => {},
   setMessages
 }: MessageListProps) {
   return (
