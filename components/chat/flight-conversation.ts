@@ -1,5 +1,6 @@
 import { Message } from "ai"
 import { Dispatch, SetStateAction } from "react"
+import { getMockFlights, AirportInfo } from "./mock-flights"
 
 // Flight conversation flow steps
 export type FlightStep =
@@ -13,93 +14,70 @@ export type FlightStep =
   | "departure_time"
   | "summary"
 
-// Map common city inputs to their full details
-// In a real app, this would use an API or database
-export const locationMap: Record<string, { city: string, state: string, country: string, airport: string, code: string }> = {
-  'winnipeg': {
-    city: 'Winnipeg',
-    state: 'Manitoba',
+// Mock airport identification for development/demo purposes
+async function mockIdentifyAirport(location: string): Promise<{ message: string, airportInfo: AirportInfo }> {
+  // Simple implementation to parse common airport codes and cities
+  const normalizedInput = location.toLowerCase().trim()
+
+  // Default to Vancouver if we can't match
+  let airportInfo: AirportInfo = {
+    correctedCity: 'Vancouver',
+    region: 'British Columbia',
     country: 'Canada',
-    airport: 'Winnipeg James Armstrong Richardson International Airport',
-    code: 'YWG'
-  },
-  'vancouver': {
-    city: 'Vancouver',
-    state: 'British Columbia',
-    country: 'Canada',
-    airport: 'Vancouver International Airport',
-    code: 'YVR'
-  },
-  'vncover': { // Handle common misspelling
-    city: 'Vancouver',
-    state: 'British Columbia',
-    country: 'Canada',
-    airport: 'Vancouver International Airport',
-    code: 'YVR'
-  },
-  'toronto': {
-    city: 'Toronto',
-    state: 'Ontario',
-    country: 'Canada',
-    airport: 'Toronto Pearson International Airport',
-    code: 'YYZ'
-  },
-  'new york': {
-    city: 'New York City',
-    state: 'NY',
-    country: 'USA',
-    airport: 'John F. Kennedy International Airport',
-    code: 'JFK'
-  },
-  'los angeles': {
-    city: 'Los Angeles',
-    state: 'CA',
-    country: 'USA',
-    airport: 'Los Angeles International Airport',
-    code: 'LAX'
-  },
-  'chicago': {
-    city: 'Chicago',
-    state: 'IL',
-    country: 'USA',
-    airport: "O'Hare International Airport",
-    code: 'ORD'
-  },
-  'london': {
-    city: 'London',
-    state: 'England',
-    country: 'UK',
-    airport: 'Heathrow Airport',
-    code: 'LHR'
-  },
-  'paris': {
-    city: 'Paris',
-    state: 'Île-de-France',
-    country: 'France',
-    airport: 'Charles de Gaulle Airport',
-    code: 'CDG'
-  },
-  'tokyo': {
-    city: 'Tokyo',
-    state: '',
-    country: 'Japan',
-    airport: 'Narita International Airport',
-    code: 'NRT'
-  },
-  'sydney': {
-    city: 'Sydney',
-    state: 'New South Wales',
-    country: 'Australia',
-    airport: 'Sydney Airport',
-    code: 'SYD'
+    airportName: 'Vancouver International Airport',
+    iataCode: 'YVR'
   }
+
+  // Simple matching for demo purposes
+  if (normalizedInput.includes('new york') || normalizedInput.includes('jfk')) {
+    airportInfo = {
+      correctedCity: 'New York City',
+      region: 'New York',
+      country: 'USA',
+      airportName: 'John F. Kennedy International Airport',
+      iataCode: 'JFK'
+    }
+  } else if (normalizedInput.includes('los angeles') || normalizedInput.includes('lax')) {
+    airportInfo = {
+      correctedCity: 'Los Angeles',
+      region: 'California',
+      country: 'USA',
+      airportName: 'Los Angeles International Airport',
+      iataCode: 'LAX'
+    }
+  } else if (normalizedInput.includes('toronto') || normalizedInput.includes('yyz')) {
+    airportInfo = {
+      correctedCity: 'Toronto',
+      region: 'Ontario',
+      country: 'Canada',
+      airportName: 'Toronto Pearson International Airport',
+      iataCode: 'YYZ'
+    }
+  } else if (normalizedInput.includes('london') || normalizedInput.includes('lhr')) {
+    airportInfo = {
+      correctedCity: 'London',
+      region: 'England',
+      country: 'United Kingdom',
+      airportName: 'Heathrow Airport',
+      iataCode: 'LHR'
+    }
+  }
+
+  // Create the formatted message
+  const message = `To confirm, you'd like to fly from ${airportInfo.correctedCity}, ${airportInfo.region}, ${airportInfo.country} from ${airportInfo.airportName} (${airportInfo.iataCode})?`
+
+  // Simulate network delay
+  await new Promise(resolve => setTimeout(resolve, 1000))
+
+  return { message, airportInfo }
 }
 
 // Simulate AI understanding the departure location and providing a confirmation
-export const simulateDepartureConfirmation = (
+export const simulateDepartureConfirmation = async (
   location: string,
   setMessages: Dispatch<SetStateAction<Message[]>>,
-  setFlightStep: Dispatch<SetStateAction<FlightStep | null>>
+  setFlightStep: Dispatch<SetStateAction<FlightStep | null>>,
+  setAirportInfo?: Dispatch<SetStateAction<AirportInfo | null>>
 ) => {
   // Simulate typing effect
   const typingMessage: Message = {
@@ -111,32 +89,35 @@ export const simulateDepartureConfirmation = (
   // Add typing indicator
   setMessages(prev => [...prev, typingMessage])
 
-  // After a delay, replace with the confirmation message
-  setTimeout(() => {
-    // Normalize the input to handle case and common typos
-    const normalizedInput = location.toLowerCase().trim()
+  try {
+    let data;
 
-    // Find the closest match in our map
-    // In a real app, this would use fuzzy matching or an API
-    let match = null
-    for (const [key, value] of Object.entries(locationMap)) {
-      if (normalizedInput.includes(key) || key.includes(normalizedInput)) {
-        match = value
-        break
+    try {
+      // Try to use the real API first
+      const response = await fetch('/api/identify-airport', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ location })
+      });
+
+      if (!response.ok) {
+        throw new Error('API request failed');
       }
+
+      data = await response.json();
+    } catch (apiError) {
+      console.log('Using mock airport identification due to API error:', apiError);
+      // Fall back to mock implementation if API is not available
+      data = await mockIdentifyAirport(location);
     }
 
-    // Default to a generic response if no match is found
-    if (!match) {
-      // For demo purposes, we'll use Vancouver as a fallback
-      match = locationMap['vancouver']
-    }
-
-    // Create the confirmation message - EXACT format as required
+    // Create the confirmation message using the AI-provided format
     const confirmationMessage: Message = {
       id: `assistant-${Date.now()}`,
       role: "assistant",
-      content: `To confirm, you'd like to fly from ${match.city}, ${match.state}, ${match.country} from ${match.airport} (${match.code})?`
+      content: data.message
     }
 
     // Replace typing indicator with the confirmation message
@@ -145,16 +126,45 @@ export const simulateDepartureConfirmation = (
       return [...filtered, confirmationMessage]
     })
 
-    // Set the next step to confirm_departure
-    setFlightStep("confirm_departure")
-  }, 1500) // Simulate typing for 1.5 seconds
+    // Store the airport info if provided
+    if (setAirportInfo && data.airportInfo) {
+      setAirportInfo(data.airportInfo);
+    }
+
+    // Set the next step after a small delay to ensure the message is rendered first
+    setTimeout(() => {
+      setFlightStep("confirm_departure")
+    }, 150) // Small delay to ensure the message renders before buttons
+  } catch (error) {
+    console.error('Error identifying airport:', error);
+
+    // Fallback message if the API call fails
+    const fallbackMessage: Message = {
+      id: `assistant-${Date.now()}`,
+      role: "assistant",
+      content: "I'm having trouble identifying that location. Could you please provide the full city name or airport code?"
+    }
+
+    // Replace typing indicator with the fallback message
+    setMessages(prev => {
+      const filtered = prev.filter(msg => msg.id !== typingMessage.id)
+      return [...filtered, fallbackMessage]
+    })
+
+    // Keep the step as departure_location to let the user try again
+    setTimeout(() => {
+      setFlightStep("departure_location")
+    }, 150)
+  }
 }
 
 // Simulate AI response for the current flight step
 export const simulateAIResponse = (
   step: FlightStep,
   setMessages: Dispatch<SetStateAction<Message[]>>,
-  courseDetails: { startDate?: string; endDate?: string } | null
+  courseDetails: { startDate?: string; endDate?: string } | null,
+  setFlightStep?: Dispatch<SetStateAction<FlightStep | null>>, // Optional as we don't always need to change step
+  nextStep?: FlightStep // Optional next step to set after message is displayed
 ) => {
   // Determine the next question based on the current flight step
   let nextQuestion = ""
@@ -211,6 +221,13 @@ export const simulateAIResponse = (
         const filtered = prev.filter(msg => msg.id !== typingMessage.id)
         return [...filtered, newMessage]
       })
+
+      // If we have a nextStep and setFlightStep function, set it after a small delay
+      if (nextStep && setFlightStep) {
+        setTimeout(() => {
+          setFlightStep(nextStep)
+        }, 150) // Small delay to ensure the message renders before buttons
+      }
     }, 1500) // Simulate typing for 1.5 seconds
   }
 }
@@ -218,7 +235,9 @@ export const simulateAIResponse = (
 // Display a summary of flight preferences
 export const displayFlightSummary = (
   flightPreferences: Partial<Record<FlightStep, string>>,
-  setMessages: Dispatch<SetStateAction<Message[]>>
+  setMessages: Dispatch<SetStateAction<Message[]>>,
+  courseDetails: { startDate?: string; endDate?: string } | null,
+  airportInfo?: AirportInfo | null
 ) => {
   setTimeout(() => {
     // Create a summary message with all the preferences
@@ -254,6 +273,70 @@ export const displayFlightSummary = (
       }
 
       setMessages(prev => [...prev, flightOptionsMessage])
+
+      // Generate mock flight data based on preferences
+      const mockFlights = getMockFlights(flightPreferences as Record<string, string>, courseDetails, airportInfo || undefined)
+
+      // Show outbound flights
+      setTimeout(() => {
+        const outboundMessage: Message = {
+          id: `outbound-flights-${Date.now()}`,
+          role: "assistant",
+          content: "<h3 class='text-md font-semibold mt-4 mb-2'>✈️ Outbound Flights</h3>"
+        }
+
+        setMessages(prev => [...prev, outboundMessage])
+
+        // Add outbound flights (first 4 flights in the array)
+        const outboundFlights = mockFlights.slice(0, 4)
+        outboundFlights.forEach((flight, index) => {
+          setTimeout(() => {
+            const flightCardMessage: Message = {
+              id: `flight-${flight.id}-${Date.now()}`,
+              role: "assistant",
+              content: `<flight-card data='${JSON.stringify(flight)}' />`
+            }
+
+            setMessages(prev => [...prev, flightCardMessage])
+          }, index * 300) // Stagger the flight cards for a nicer visual effect
+        })
+
+        // After outbound flights, show return flights
+        setTimeout(() => {
+          const returnMessage: Message = {
+            id: `return-flights-${Date.now()}`,
+            role: "assistant",
+            content: "<h3 class='text-md font-semibold mt-4 mb-2'>✈️ Return Flights</h3>"
+          }
+
+          setMessages(prev => [...prev, returnMessage])
+
+          // Add return flights (last flights in the array)
+          const returnFlights = mockFlights.slice(4)
+          returnFlights.forEach((flight, index) => {
+            setTimeout(() => {
+              const flightCardMessage: Message = {
+                id: `flight-${flight.id}-${Date.now()}`,
+                role: "assistant",
+                content: `<flight-card data='${JSON.stringify(flight)}' />`
+              }
+
+              setMessages(prev => [...prev, flightCardMessage])
+            }, index * 300) // Stagger the flight cards
+          })
+
+          // Final message after all flights are shown
+          setTimeout(() => {
+            const finalMessage: Message = {
+              id: `final-message-${Date.now()}`,
+              role: "assistant",
+              content: "Would you like to select one of these flights or see more options? I can also apply additional filters based on your preferences."
+            }
+
+            setMessages(prev => [...prev, finalMessage])
+          }, returnFlights.length * 300 + 500)
+        }, outboundFlights.length * 300 + 500)
+      }, 1000)
     }, 2000)
   }, 1500)
 }

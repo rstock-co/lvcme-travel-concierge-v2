@@ -9,6 +9,7 @@ import { Message } from "ai"
 import { RefreshCw } from "lucide-react"
 import { FlightStep, simulateDepartureConfirmation, simulateAIResponse, displayFlightSummary } from "./chat/flight-conversation"
 import { MessageList } from "./chat/message-list"
+import { AirportInfo } from "./chat/mock-flights"
 
 export function Chat() {
   const [courseDetails, setCourseDetails] = useState<{
@@ -25,6 +26,9 @@ export function Chat() {
 
   // Store flight preferences
   const [flightPreferences, setFlightPreferences] = useState<Partial<Record<FlightStep, string>>>({})
+
+  // Store the airport info from the API
+  const [departureAirport, setDepartureAirport] = useState<AirportInfo | null>(null)
 
   // Initialize chat with empty messages until course data is loaded
   const [initialMessages, setInitialMessages] = useState<Message[]>([])
@@ -155,8 +159,10 @@ export function Chat() {
 
           // Start the flight conversation flow
           setTimeout(() => {
-            setFlightStep("departure_location")
-            simulateAIResponse("departure_location", setMessages, courseDetails)
+            // Clear the flight step first to prevent buttons showing prematurely
+            setFlightStep(null)
+            // Then simulate the next response
+            simulateAIResponse("departure_location", setMessages, courseDetails, setFlightStep, "departure_location")
           }, 1000)
         }, 1500)
       }, 1000)
@@ -181,39 +187,38 @@ export function Chat() {
       [step]: choice
     }))
 
+    // Clear the flight step to prevent buttons showing prematurely
+    setFlightStep(null)
+
     // Handle different flight steps
     switch(step) {
       case "departure_location":
         // For departure_location, we need to simulate the AI understanding the location
         // and providing a confirmation with the full details
-        simulateDepartureConfirmation(choice, setMessages, setFlightStep)
+        simulateDepartureConfirmation(choice, setMessages, setFlightStep, setDepartureAirport)
         return // Exit early as we're handling this specially
 
       case "confirm_departure":
         setTimeout(() => {
-          setFlightStep("arrival_timing")
-          simulateAIResponse("arrival_timing", setMessages, courseDetails)
+          simulateAIResponse("arrival_timing", setMessages, courseDetails, setFlightStep, "arrival_timing")
         }, 1000)
         break
 
       case "arrival_timing":
         if (choice.includes("extra days")) {
           setTimeout(() => {
-            setFlightStep("travel_dates")
-            simulateAIResponse("travel_dates", setMessages, courseDetails)
+            simulateAIResponse("travel_dates", setMessages, courseDetails, setFlightStep, "travel_dates")
           }, 1000)
         } else {
           setTimeout(() => {
-            setFlightStep("companions")
-            simulateAIResponse("companions", setMessages, courseDetails)
+            simulateAIResponse("companions", setMessages, courseDetails, setFlightStep, "companions")
           }, 1000)
         }
         break
 
       case "travel_dates":
         setTimeout(() => {
-          setFlightStep("companions")
-          simulateAIResponse("companions", setMessages, courseDetails)
+          simulateAIResponse("companions", setMessages, courseDetails, setFlightStep, "companions")
         }, 1000)
         break
 
@@ -232,33 +237,29 @@ export function Chat() {
         }
 
         setTimeout(() => {
-          setFlightStep("cabin_class")
-          simulateAIResponse("cabin_class", setMessages, courseDetails)
+          simulateAIResponse("cabin_class", setMessages, courseDetails, setFlightStep, "cabin_class")
         }, 1000)
         break
 
       case "cabin_class":
         setTimeout(() => {
-          setFlightStep("layovers")
-          simulateAIResponse("layovers", setMessages, courseDetails)
+          simulateAIResponse("layovers", setMessages, courseDetails, setFlightStep, "layovers")
         }, 1000)
         break
 
       case "layovers":
         setTimeout(() => {
-          setFlightStep("departure_time")
-          simulateAIResponse("departure_time", setMessages, courseDetails)
+          simulateAIResponse("departure_time", setMessages, courseDetails, setFlightStep, "departure_time")
         }, 1000)
         break
 
       case "departure_time":
         setTimeout(() => {
-          setFlightStep("summary")
-          simulateAIResponse("summary", setMessages, courseDetails)
+          simulateAIResponse("summary", setMessages, courseDetails, setFlightStep, "summary")
 
           // Display flight summary after a delay
           setTimeout(() => {
-            displayFlightSummary(flightPreferences, setMessages)
+            displayFlightSummary(flightPreferences, setMessages, courseDetails, departureAirport)
             setFlightStep(null)
           }, 2000)
         }, 1000)
@@ -289,7 +290,7 @@ export function Chat() {
     if (flightStep === "departure_location") {
       // Process the location input
       setTimeout(() => {
-        simulateDepartureConfirmation(userMessage.content, setMessages, setFlightStep)
+        simulateDepartureConfirmation(userMessage.content, setMessages, setFlightStep, setDepartureAirport)
       }, 1000)
     } else {
       // For other inputs, just simulate a generic response

@@ -3,6 +3,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { FlightButtons } from "./flight-buttons"
 import { QuickOptions } from "./quick-options"
 import { FlightStep } from "./flight-conversation"
+import { MessageParser } from "./message-parser"
 
 type MessageListProps = {
   messages: Message[]
@@ -42,7 +43,9 @@ export function MessageList({
                   : "bg-muted"
               }`}
             >
-              <p className="text-sm" dangerouslySetInnerHTML={{ __html: message.content }}></p>
+              <div className="text-sm">
+                <MessageParser content={message.content} />
+              </div>
 
               {/* Show quick option buttons after the first assistant message */}
               {message.role === "assistant" && index === 0 && messages.length === 1 && (

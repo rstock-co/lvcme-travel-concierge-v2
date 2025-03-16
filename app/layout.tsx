@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { ThemeProvider } from "@/components/ui/theme-provider";
-import { ChatStateProvider } from "@/hooks/use-chat-state";
 import { TravelStateProvider } from "@/hooks/use-travel-state";
+import { Toaster } from "@/components/ui/toaster";
 
 export const metadata: Metadata = {
-  title: "Las Vegas Travel Concierge",
-  description: "Plan your perfect Las Vegas trip with our AI-powered travel concierge",
+  title: "Travel Concierge",
+  description: "AI-powered travel assistant for LVCME",
 };
 
 export default function RootLayout({
@@ -24,9 +24,8 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <TravelStateProvider>
-            <ChatStateProvider>
-              {children}
-            </ChatStateProvider>
+            {children}
+            <Toaster />
           </TravelStateProvider>
         </ThemeProvider>
       </body>
