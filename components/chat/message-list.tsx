@@ -14,7 +14,8 @@ function ChatMessage({
   totalMessages,
   flightStep,
   onQuickOptionSelect,
-  onFlightOptionSelect
+  onFlightOptionSelect,
+  setMessages
 }: {
   message: Message,
   index: number,
@@ -22,21 +23,25 @@ function ChatMessage({
   totalMessages: number,
   flightStep: FlightStep | null,
   onQuickOptionSelect: (option: string) => void,
-  onFlightOptionSelect: (step: FlightStep, choice: string) => void
+  onFlightOptionSelect: (step: FlightStep, choice: string) => void,
+  setMessages?: React.Dispatch<React.SetStateAction<Message[]>>
 }) {
   const [isCurrentMessageFlightCard, setIsCurrentMessageFlightCard] = useState(false);
 
-  // For flight cards and headings, render them without a chat bubble
+  // For flight cards, flight preferences, and headings, render them without a chat bubble
   const isHeading = message.content.includes('<h3 class=') &&
                    (message.content.includes('Outbound Flights') ||
                     message.content.includes('Return Flights'));
 
-  if (message.role === "assistant" && (isCurrentMessageFlightCard || isHeading)) {
+  const isFlightPreferences = message.content.includes('<flight-preferences data=');
+
+  if (message.role === "assistant" && (isCurrentMessageFlightCard || isHeading || isFlightPreferences)) {
     return (
       <div className="w-full max-w-[90%] mx-auto">
         <MessageParser
           content={message.content}
           isFlightCard={setIsCurrentMessageFlightCard}
+          setMessages={setMessages}
         />
 
         {/* Show flight conversation buttons based on current step */}
@@ -75,6 +80,7 @@ function ChatMessage({
             <MessageParser
               content={message.content}
               isFlightCard={setIsCurrentMessageFlightCard}
+              setMessages={setMessages}
             />
           </div>
 
@@ -110,6 +116,7 @@ type MessageListProps = {
   isLoading: boolean
   onQuickOptionSelect: (option: string) => void
   onFlightOptionSelect: (step: FlightStep, choice: string) => void
+  setMessages?: React.Dispatch<React.SetStateAction<Message[]>>
 }
 
 export function MessageList({
@@ -117,7 +124,8 @@ export function MessageList({
   flightStep,
   isLoading,
   onQuickOptionSelect,
-  onFlightOptionSelect
+  onFlightOptionSelect,
+  setMessages
 }: MessageListProps) {
   return (
     <div className="space-y-4">
@@ -131,6 +139,7 @@ export function MessageList({
           flightStep={flightStep}
           onQuickOptionSelect={onQuickOptionSelect}
           onFlightOptionSelect={onFlightOptionSelect}
+          setMessages={setMessages}
         />
       ))}
 

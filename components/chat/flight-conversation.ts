@@ -240,103 +240,153 @@ export const displayFlightSummary = (
   airportInfo?: AirportInfo | null
 ) => {
   setTimeout(() => {
-    // Create a summary message with all the preferences
+    // Create a summary message with the FlightPreferences component
     const summaryMessage: Message = {
       id: `summary-${Date.now()}`,
       role: "assistant",
-      content: `
-        <div class="flight-summary">
-          <h3>Flight Preferences</h3>
-          <h4>To summarize, you're looking for:</h4>
-          <ul>
-            ${flightPreferences.departure_location ? `<li>Departure: ${flightPreferences.departure_location}</li>` : ''}
-            ${flightPreferences.arrival_timing ? `<li>Arrival: ${flightPreferences.arrival_timing}</li>` : ''}
-            ${flightPreferences.travel_dates ? `<li>Travel dates: ${flightPreferences.travel_dates}</li>` : ''}
-            ${flightPreferences.companions ? `<li>Traveling: ${flightPreferences.companions}</li>` : ''}
-            ${flightPreferences.cabin_class ? `<li>Cabin class: ${flightPreferences.cabin_class}</li>` : ''}
-            ${flightPreferences.layovers ? `<li>Layover preference: ${flightPreferences.layovers}</li>` : ''}
-            ${flightPreferences.departure_time ? `<li>Departure time: ${flightPreferences.departure_time}</li>` : ''}
-          </ul>
-        </div>
-      `
+      content: `<flight-preferences data='${JSON.stringify({
+        preferences: {
+          departure: {
+            city: airportInfo?.correctedCity || flightPreferences.departure_location?.split(',')[0] || "Unknown",
+            state: airportInfo?.region || "",
+            country: airportInfo?.country || "",
+            airport: airportInfo?.airportName || "",
+            code: airportInfo?.iataCode || ""
+          },
+          destination: {
+            city: "Las Vegas",
+            state: "NV",
+            country: "USA",
+            airport: "Harry Reid International Airport",
+            code: "LAS"
+          },
+          arrivalPreference: flightPreferences.arrival_timing?.includes("day before")
+            ? "day-before"
+            : flightPreferences.arrival_timing?.includes("2hrs")
+              ? "2hrs-before"
+              : "extra-days",
+          dates: flightPreferences.travel_dates
+            ? {
+                departure: flightPreferences.travel_dates.split(" to ")[0],
+                return: flightPreferences.travel_dates.split(" to ")[1]
+              }
+            : undefined,
+          travelers: parseInt(flightPreferences.companions?.split(" ")[0] || "1"),
+          cabinClass: flightPreferences.cabin_class?.includes("Economy")
+            ? "Economy"
+            : flightPreferences.cabin_class?.includes("Business")
+              ? "Business Class"
+              : flightPreferences.cabin_class?.includes("First")
+                ? "First Class"
+                : "No Preference",
+          layoverPreference: flightPreferences.layovers?.includes("direct")
+            ? "direct"
+            : flightPreferences.layovers?.includes("one stop")
+              ? "one-stop"
+              : "no-preference",
+          departureTimePreference: flightPreferences.departure_time?.includes("early")
+            ? "early-am"
+            : flightPreferences.departure_time?.includes("daytime")
+              ? "daytime"
+              : flightPreferences.departure_time?.includes("evening")
+                ? "evening"
+                : "no-preference",
+          courseInfo: courseDetails
+            ? {
+                startDate: courseDetails.startDate || "",
+                endDate: courseDetails.endDate || ""
+              }
+            : undefined
+        }
+      })}'></flight-preferences>`
     }
 
     // Add the summary message
     setMessages(prev => [...prev, summaryMessage])
 
-    // After showing the summary, display flight options
-    setTimeout(() => {
-      const flightOptionsMessage: Message = {
-        id: `flight-options-${Date.now()}`,
-        role: "assistant",
-        content: "I've found several flight options that match your preferences. Here are the top recommendations:"
-      }
+    // Note: We're removing the automatic display of flight results here
+    // The flight results will now be triggered from the MessageParser component
+    // when the user clicks the search button
+  }, 1500)
+}
 
-      setMessages(prev => [...prev, flightOptionsMessage])
+// This function will be called from the MessageParser when the search button is clicked
+export const displayFlightResults = (
+  flightPreferences: Record<string, string>,
+  setMessages: Dispatch<SetStateAction<Message[]>>,
+  courseDetails: { startDate?: string; endDate?: string } | null,
+  airportInfo?: AirportInfo | undefined
+) => {
+  // First add the "I've found several flight options" message
+  const flightOptionsMessage: Message = {
+    id: `flight-options-${Date.now()}`,
+    role: "assistant",
+    content: "I've found several flight options that match your preferences. Here are the top recommendations:"
+  }
 
-      // Generate mock flight data based on preferences
-      const mockFlights = getMockFlights(flightPreferences as Record<string, string>, courseDetails, airportInfo || undefined)
+  setMessages(prev => [...prev, flightOptionsMessage])
 
-      // Show outbound flights
+  // Generate mock flight data based on preferences
+  const mockFlights = getMockFlights(flightPreferences, courseDetails, airportInfo)
+
+  // Show outbound flights
+  setTimeout(() => {
+    const outboundMessage: Message = {
+      id: `outbound-flights-${Date.now()}`,
+      role: "assistant",
+      content: "<h3 class='text-md font-semibold mt-4 mb-2'>✈️ Outbound Flights</h3>"
+    }
+
+    setMessages(prev => [...prev, outboundMessage])
+
+    // Add outbound flights (first 4 flights in the array)
+    const outboundFlights = mockFlights.slice(0, 4)
+    outboundFlights.forEach((flight, index) => {
       setTimeout(() => {
-        const outboundMessage: Message = {
-          id: `outbound-flights-${Date.now()}`,
+        const flightCardMessage: Message = {
+          id: `flight-${flight.id}-${Date.now()}`,
           role: "assistant",
-          content: "<h3 class='text-md font-semibold mt-4 mb-2'>✈️ Outbound Flights</h3>"
+          content: `<flight-card data='${JSON.stringify(flight)}' />`
         }
 
-        setMessages(prev => [...prev, outboundMessage])
+        setMessages(prev => [...prev, flightCardMessage])
+      }, index * 300) // Stagger the flight cards for a nicer visual effect
+    })
 
-        // Add outbound flights (first 4 flights in the array)
-        const outboundFlights = mockFlights.slice(0, 4)
-        outboundFlights.forEach((flight, index) => {
-          setTimeout(() => {
-            const flightCardMessage: Message = {
-              id: `flight-${flight.id}-${Date.now()}`,
-              role: "assistant",
-              content: `<flight-card data='${JSON.stringify(flight)}' />`
-            }
+    // After outbound flights, show return flights
+    setTimeout(() => {
+      const returnMessage: Message = {
+        id: `return-flights-${Date.now()}`,
+        role: "assistant",
+        content: "<h3 class='text-md font-semibold mt-4 mb-2'>✈️ Return Flights</h3>"
+      }
 
-            setMessages(prev => [...prev, flightCardMessage])
-          }, index * 300) // Stagger the flight cards for a nicer visual effect
-        })
+      setMessages(prev => [...prev, returnMessage])
 
-        // After outbound flights, show return flights
+      // Add return flights (last flights in the array)
+      const returnFlights = mockFlights.slice(4)
+      returnFlights.forEach((flight, index) => {
         setTimeout(() => {
-          const returnMessage: Message = {
-            id: `return-flights-${Date.now()}`,
+          const flightCardMessage: Message = {
+            id: `flight-${flight.id}-${Date.now()}`,
             role: "assistant",
-            content: "<h3 class='text-md font-semibold mt-4 mb-2'>✈️ Return Flights</h3>"
+            content: `<flight-card data='${JSON.stringify(flight)}' />`
           }
 
-          setMessages(prev => [...prev, returnMessage])
+          setMessages(prev => [...prev, flightCardMessage])
+        }, index * 300) // Stagger the flight cards
+      })
 
-          // Add return flights (last flights in the array)
-          const returnFlights = mockFlights.slice(4)
-          returnFlights.forEach((flight, index) => {
-            setTimeout(() => {
-              const flightCardMessage: Message = {
-                id: `flight-${flight.id}-${Date.now()}`,
-                role: "assistant",
-                content: `<flight-card data='${JSON.stringify(flight)}' />`
-              }
+      // Final message after all flights are shown
+      setTimeout(() => {
+        const finalMessage: Message = {
+          id: `final-message-${Date.now()}`,
+          role: "assistant",
+          content: "Would you like to select one of these flights or see more options? I can also apply additional filters based on your preferences."
+        }
 
-              setMessages(prev => [...prev, flightCardMessage])
-            }, index * 300) // Stagger the flight cards
-          })
-
-          // Final message after all flights are shown
-          setTimeout(() => {
-            const finalMessage: Message = {
-              id: `final-message-${Date.now()}`,
-              role: "assistant",
-              content: "Would you like to select one of these flights or see more options? I can also apply additional filters based on your preferences."
-            }
-
-            setMessages(prev => [...prev, finalMessage])
-          }, returnFlights.length * 300 + 500)
-        }, outboundFlights.length * 300 + 500)
-      }, 1000)
-    }, 2000)
-  }, 1500)
+        setMessages(prev => [...prev, finalMessage])
+      }, returnFlights.length * 300 + 500)
+    }, outboundFlights.length * 300 + 500)
+  }, 1000)
 }
