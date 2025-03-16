@@ -1,14 +1,21 @@
 "use client"
 
-import { FC } from 'react'
+import { FC, useEffect } from 'react'
 import { FlightCard, FlightData } from '../flight-card'
 import { toast } from "@/hooks/use-toast"
 
 interface MessageParserProps {
-  content: string
+  content: string;
+  isFlightCard: (isCard: boolean) => void;
 }
 
-const MessageParser: FC<MessageParserProps> = ({ content }) => {
+const MessageParser: FC<MessageParserProps> = ({ content, isFlightCard }) => {
+  // Use effect to signal whether this is a flight card after rendering
+  useEffect(() => {
+    const isCardContent = content.includes('<flight-card data=');
+    isFlightCard(isCardContent);
+  }, [content, isFlightCard]);
+
   // Check if we need to render a flight card
   if (content.includes('<flight-card data=')) {
     try {
@@ -27,7 +34,7 @@ const MessageParser: FC<MessageParserProps> = ({ content }) => {
         }
 
         return (
-          <div className="my-2">
+          <div className="w-full mb-3">
             <FlightCard
               flight={flightData}
               onSelect={handleSelectFlight}
