@@ -73,18 +73,21 @@ export async function fetchCourse(): Promise<Course | null> {
 
 // Format date to a readable string
 export function formatDate(dateString: string): string {
-  if (!dateString) return 'TBD'
+  if (!dateString) return 'TBD';
 
   try {
-    const date = new Date(dateString)
-    return date.toLocaleDateString('en-US', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
+    const date = new Date(dateString);
+
+    // Format the date using Intl.DateTimeFormat
+    const formattedDate = new Intl.DateTimeFormat('en-US', {
+      weekday: 'short',
+      month: 'short',
       day: 'numeric'
-    })
+    }).format(date);
+
+    return formattedDate;
   } catch (error) {
-    console.error('Error formatting date:', error)
-    return 'TBD'
+    console.error('Error formatting date:', error);
+    return 'TBD';
   }
 }
